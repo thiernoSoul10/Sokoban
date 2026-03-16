@@ -1,0 +1,174 @@
+package Vue;
+/*
+ * Sokoban - Encore une nouvelle version (à but pédagogique) du célèbre jeu
+ * Copyright (C) 2018 Guillaume Huard
+ *
+ * Ce programme est libre, vous pouvez le redistribuer et/ou le
+ * modifier selon les termes de la Licence Publique Générale GNU publiée par la
+ * Free Software Foundation (version 2 ou bien toute autre version ultérieure
+ * choisie par vous).
+ *
+ * Ce programme est distribué car potentiellement utile, mais SANS
+ * AUCUNE GARANTIE, ni explicite ni implicite, y compris les garanties de
+ * commercialisation ou d'adaptation dans un but spécifique. Reportez-vous à la
+ * Licence Publique Générale GNU pour plus de détails.
+ *
+ * Vous devez avoir reçu une copie de la Licence Publique Générale
+ * GNU en même temps que ce programme ; si ce n'est pas le cas, écrivez à la Free
+ * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
+ * États-Unis.
+ *
+ * Contact:
+ *          Guillaume.Huard@imag.fr
+ *          Laboratoire LIG
+ *          700 avenue centrale
+ *          Domaine universitaire
+ *          38401 Saint Martin d'Hères
+ */
+
+import javax.imageio.ImageIO;
+import javax.swing.*;
+
+import Global.Configuration;
+import Model.Jeu;
+import Model.Niveaux.Niveau;
+
+import java.awt.*;
+import java.io.*;
+
+public class NiveauGraphique extends JComponent {
+    private InterfaceGraphique interG;
+	private int counter;
+    private int tailleCase = 40;
+    private int offsetX;
+    private int offsetY;
+	private Image butImg;
+    private Image caise_sur_bImg;
+    private Image caisseImg;
+    private Image murImg;
+	private Image pousseurImg;
+    private Image solImg;
+    public Jeu jeu; // à Remettre en private.
+
+	public NiveauGraphique(InterfaceGraphique ig) {
+        this.interG = ig;
+        
+        setFocusable(true);
+        requestFocusInWindow();
+
+        
+        FileInputStream fin = Configuration.ouvre("Terrains/prog.txt");
+        jeu = new Jeu(fin);
+
+		try {
+			// Chargement des images utilisables dans Swing
+			butImg = ImageIO.read(Configuration.ouvre("Images/But.png"));
+			caise_sur_bImg = ImageIO.read(Configuration.ouvre("Images/Caisse_sur_but.png"));
+			caisseImg = ImageIO.read(Configuration.ouvre("Images/Caisse.png"));
+			murImg = ImageIO.read(Configuration.ouvre("Images/Mur.png"));
+			pousseurImg = ImageIO.read(Configuration.ouvre("Images/Pousseur.png"));
+			solImg = ImageIO.read(Configuration.ouvre("Images/Sol.png"));
+            
+		} catch (IOException e) {
+			Configuration.debugeurErreur("ERREUR : impossible de charger l'image");
+			System.exit(3);
+		}
+		counter = 1;
+	}
+
+	@Override
+	public void paintComponent(Graphics g) {
+		Configuration.debugeur("Entree dans paintComponent : " + counter++);
+
+        // On efface tout
+        super.paintComponent(g);
+
+		// Graphics 2D est le vrai type de l'objet passé en paramètre
+		// Le cast permet d'avoir acces a un peu plus de primitives de dessin
+		Graphics2D drawable = (Graphics2D) g;
+
+		// On reccupere quelques infos provenant de la partie JComponent
+		int width = getSize().width;
+		int height = getSize().height;
+
+        Niveau niveau = this.getNiveauJeu();
+
+        if(niveau == null){
+            return; // fin du jeu.
+        }
+
+        interG.frame.setTitle("Sokoban Niveau: " + niveau.nom());
+
+        int lignes = niveau.lignes();
+        int colonnes = niveau.colonnes();
+
+        int largeurNiveau = colonnes * tailleCase;
+        int hauteurNiveau = lignes * tailleCase;
+
+        if(hauteurNiveau > height || largeurNiveau > width){
+            height = hauteurNiveau + 50;
+            width = largeurNiveau + 50;
+
+            Configuration.debugeur("Resized the Window to :" + width +  " x " + height);
+
+		    interG.frame.setSize(width + 20, width + 20);
+            return;
+        }
+
+        offsetX = (width - largeurNiveau) / 2;
+        offsetY = (height - hauteurNiveau) / 2;
+
+        // On dessine le niveau:
+        for(int i = 0; i < lignes; i++){
+            for(int j=0; j < colonnes; j++){
+
+                int x = offsetX + j*tailleCase;
+                int y = offsetY + i*tailleCase;
+
+                drawable.drawImage(solImg, x, y, tailleCase, tailleCase, null);
+
+		        if(niveau.aBut(i, j) && niveau.aPousseur(i, j)){
+    		        drawable.drawImage(butImg, x, y, tailleCase, tailleCase, null);
+    		        drawable.drawImage(pousseurImg, x, y, tailleCase, tailleCase, null);
+                } else if(niveau.aBut(i, j) && niveau.aCaisse(i, j)){
+    		        drawable.drawImage(caise_sur_bImg, x, y, tailleCase, tailleCase, null);
+                }
+                else if(niveau.aMur(i, j))
+    		        drawable.drawImage(murImg, x, y, tailleCase, tailleCase, null);
+                else if(niveau.aBut(i, j))
+    		        drawable.drawImage(butImg, x, y, tailleCase, tailleCase, null);
+                else if(niveau.aCaisse(i, j))
+    		        drawable.drawImage(caisseImg, x, y, tailleCase, tailleCase, null);
+                else if(niveau.aPousseur(i, j))
+    		        drawable.drawImage(pousseurImg, x, y, tailleCase, tailleCase, null);
+                // On affiche une petite image au milieu
+            }
+        }
+	}
+
+    public boolean niveauTermine(){
+        return this.getNiveauJeu().niveauOk();
+    }
+
+    public Niveau getNiveauJeu(){ return jeu.niveau(); }
+
+    public boolean deplacePousseur(int x, int y){
+        Niveau curNiveau = this.getNiveauJeu();
+        int posX = curNiveau.getPousseurX();
+        int posY = curNiveau.getPousseurY();
+
+        x = (x - offsetX)/tailleCase;
+        y = (y - offsetY)/tailleCase;
+
+        if(x == posX -1 && y==posY)
+            return curNiveau.deplacePousseur('g');
+        else if(x == posX +1 && y==posY)
+            return curNiveau.deplacePousseur('d');
+        else if(x == posX && y == posY - 1)
+            return curNiveau.deplacePousseur('h');
+        else if(x == posX && y == posY + 1)
+            return curNiveau.deplacePousseur('b');
+        
+        return false;
+    }
+}
