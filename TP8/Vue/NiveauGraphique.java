@@ -1,182 +1,268 @@
 package Vue;
-/*
- * Sokoban - Encore une nouvelle version (à but pédagogique) du célèbre jeu
- * Copyright (C) 2018 Guillaume Huard
- *
- * Ce programme est libre, vous pouvez le redistribuer et/ou le
- * modifier selon les termes de la Licence Publique Générale GNU publiée par la
- * Free Software Foundation (version 2 ou bien toute autre version ultérieure
- * choisie par vous).
- *
- * Ce programme est distribué car potentiellement utile, mais SANS
- * AUCUNE GARANTIE, ni explicite ni implicite, y compris les garanties de
- * commercialisation ou d'adaptation dans un but spécifique. Reportez-vous à la
- * Licence Publique Générale GNU pour plus de détails.
- *
- * Vous devez avoir reçu une copie de la Licence Publique Générale
- * GNU en même temps que ce programme ; si ce n'est pas le cas, écrivez à la Free
- * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
- * États-Unis.
- *
- * Contact:
- *          Guillaume.Huard@imag.fr
- *          Laboratoire LIG
- *          700 avenue centrale
- *          Domaine universitaire
- *          38401 Saint Martin d'Hères
- */
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-import Global.Configuration;
 import Model.Jeu;
+import Model.Global.*;
 import Model.Niveaux.Niveau;
+import Model.Structures.SequenceInterface;
+import Model.Structures.SequenceListe;
 
 import java.awt.*;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class NiveauGraphique extends JComponent {
+
     private InterfaceGraphique interG;
-	private int counter;
+    private SequenceInterface<Coordonnees> movements;
+    private Coordonnees lastQueued = null;
+
     private int tailleCase = 40;
     private int offsetX;
     private int offsetY;
-	private Image butImg;
+
+    private Image butImg;
     private Image caise_sur_bImg;
     private Image caisseImg;
     private Image murImg;
-	private Image pousseurImg;
     private Image solImg;
-    public Jeu jeu; // à Remettre en private.
 
-	public NiveauGraphique(InterfaceGraphique ig) {
+    public Jeu jeu;
+
+    private List<Animation> animations = new ArrayList<>();
+
+    private AnimationCoups animationPousseur = null;
+    private AnimationCoups animationCaisse   = null;
+    private AnimationPousseur    animPousseurImg;
+
+    private float pousseurRenderX, pousseurRenderY;
+    private float caisseRenderX,   caisseRenderY;
+
+    private int caisseStartX, caisseStartY;
+    private int caisseEndX,   caisseEndY;
+
+    public NiveauGraphique(InterfaceGraphique ig) {
         this.interG = ig;
-        
+
         setFocusable(true);
         requestFocusInWindow();
 
-        
         FileInputStream fin = Configuration.ouvre("Terrains/prog.txt");
         jeu = new Jeu(fin);
+        movements = new SequenceListe<>();
 
-		try {
-			// Chargement des images utilisables dans Swing
-			butImg = ImageIO.read(Configuration.ouvre("Images/But.png"));
-			caise_sur_bImg = ImageIO.read(Configuration.ouvre("Images/Caisse_sur_but.png"));
-			caisseImg = ImageIO.read(Configuration.ouvre("Images/Caisse.png"));
-			murImg = ImageIO.read(Configuration.ouvre("Images/Mur.png"));
-			pousseurImg = ImageIO.read(Configuration.ouvre("Images/Pousseur.png"));
-			solImg = ImageIO.read(Configuration.ouvre("Images/Sol.png"));
-            
-		} catch (IOException e) {
-			Configuration.debugeurErreur("ERREUR : impossible de charger l'image");
-			System.exit(3);
-		}
-		counter = 1;
-	}
-
-	@Override
-	public void paintComponent(Graphics g) {
-		Configuration.debugeur("Entree dans paintComponent : " + counter++);
-
-        // On efface tout
-        super.paintComponent(g);
-
-		// Graphics 2D est le vrai type de l'objet passé en paramètre
-		// Le cast permet d'avoir acces a un peu plus de primitives de dessin
-		Graphics2D drawable = (Graphics2D) g;
-
-		// On reccupere quelques infos provenant de la partie JComponent
-		int width = getSize().width;
-		int height = getSize().height;
-
-        Niveau niveau = this.getNiveauJeu();
-
-        if(niveau == null){
-            return; // fin du jeu.
+        try {
+            butImg         = ImageIO.read(Configuration.ouvre("Images/But.png"));
+            caise_sur_bImg = ImageIO.read(Configuration.ouvre("Images/Caisse_sur_but.png"));
+            caisseImg      = ImageIO.read(Configuration.ouvre("Images/Caisse.png"));
+            murImg         = ImageIO.read(Configuration.ouvre("Images/Mur.png"));
+            solImg         = ImageIO.read(Configuration.ouvre("Images/Sol.png"));
+        } catch (IOException e) {
+            Configuration.debugeurErreur("Erreur chargement images");
+            System.exit(3);
         }
 
-        interG.frame.setTitle("Sokoban Niveau: " + niveau.nom());
+        animPousseurImg = new AnimationPousseur();
+        animations.add(animPousseurImg);
 
-        int lignes = niveau.lignes();
-        int colonnes = niveau.colonnes();
+        new Timer(16, e -> updateAnimation(0.016f)).start();
+    }
 
-        int largeurNiveau = colonnes * tailleCase;
-        int hauteurNiveau = lignes * tailleCase;
+    // -------------------------------------------------------------------------
+    // Gestion de la queue
+    // -------------------------------------------------------------------------
 
-        if(hauteurNiveau > height || largeurNiveau > width){
-            height = hauteurNiveau + 50;
-            width = largeurNiveau + 50;
+    public void addMovement(Coordonnees p) {
+        if (movements.getNbElement() >= 5) return;
+        movements.insereQueue(p);
+        lastQueued = p;
+    }
 
-            Configuration.debugeur("Resized the Window to :" + width +  " x " + height);
+    public Coordonnees getLastQueuedPosition() {
+        if (lastQueued != null && !movements.estVide()) {
+            return lastQueued;
+        }
+        return new Coordonnees(jeu.niveau().getPousseurX(), jeu.niveau().getPousseurY());
+    }
 
-		    interG.frame.setSize(width + 20, width + 20);
-            return;
+    // -------------------------------------------------------------------------
+    // Boucle d'animation
+    // -------------------------------------------------------------------------
+
+    public void updateAnimation(float dt) {
+        animations.removeIf(a -> {
+            a.update(dt);
+            return a.isFinished();
+        });
+
+        if (animationPousseur != null) {
+            if (animationPousseur.isFinished()) {
+                animationPousseur = null;
+            } else {
+                pousseurRenderX = animationPousseur.getX();
+                pousseurRenderY = animationPousseur.getY();
+            }
         }
 
-        offsetX = (width - largeurNiveau) / 2;
-        offsetY = (height - hauteurNiveau) / 2;
+        if (animationCaisse != null) {
+            if (animationCaisse.isFinished()) {
+                animationCaisse = null;
+            } else {
+                caisseRenderX = animationCaisse.getX();
+                caisseRenderY = animationCaisse.getY();
+            }
+        }
 
-        // On dessine le niveau:
-        for(int i = 0; i < lignes; i++){
-            for(int j=0; j < colonnes; j++){
-
-                int x = offsetX + j*tailleCase;
-                int y = offsetY + i*tailleCase;
-
-                drawable.drawImage(solImg, x, y, tailleCase, tailleCase, null);
-
-		        if(niveau.aBut(i, j) && niveau.aPousseur(i, j)){
-    		        drawable.drawImage(butImg, x, y, tailleCase, tailleCase, null);
-    		        drawable.drawImage(pousseurImg, x, y, tailleCase, tailleCase, null);
-                } else if(niveau.aBut(i, j) && niveau.aCaisse(i, j)){
-    		        drawable.drawImage(caise_sur_bImg, x, y, tailleCase, tailleCase, null);
-                }
-                else if(niveau.aMur(i, j))
-    		        drawable.drawImage(murImg, x, y, tailleCase, tailleCase, null);
-                else if(niveau.aBut(i, j))
-    		        drawable.drawImage(butImg, x, y, tailleCase, tailleCase, null);
-                else if(niveau.aCaisse(i, j))
-    		        drawable.drawImage(caisseImg, x, y, tailleCase, tailleCase, null);
-                else if(niveau.aPousseur(i, j))
-    		        drawable.drawImage(pousseurImg, x, y, tailleCase, tailleCase, null);
-
-                // Affichage des marques : croix rouge sur la case
-                if(niveau.aMarque(i, j)){
-                    int marge = 5;
-                    drawable.setColor(new java.awt.Color(0xFF0000));
-                    drawable.setStroke(new java.awt.BasicStroke(4));
-                    drawable.drawLine(x + marge, y + marge, x + tailleCase - marge, y + tailleCase - marge);
-                    drawable.drawLine(x + tailleCase - marge, y + marge, x + marge, y + tailleCase - marge);
+        if (animationPousseur == null && animationCaisse == null) {
+            if (!movements.estVide()) {
+                Coordonnees p = movements.extraitTete();
+                deplacePousseur(p.x, p.y);
+            } else {
+                lastQueued = null;
+                animPousseurImg.setEnMouvement(false);
+                if (jeu.niveau().niveauOk()) {
+                    if (jeu.prochainNiveau())
+                        Configuration.debugeur("NIVEAU suivant\n");
+                    else
+                        Configuration.debugeur("FIN DU JEU\n");
                 }
             }
         }
-	}
 
-    public boolean niveauTermine(){
-        return this.getNiveauJeu().niveauOk();
+        repaint();
     }
 
-    public Niveau getNiveauJeu(){ return jeu.niveau(); }
+    // -------------------------------------------------------------------------
+    // Rendu
+    // -------------------------------------------------------------------------
 
-    public boolean deplacePousseur(int x, int y){
-        Niveau curNiveau = this.getNiveauJeu();
-        int posX = curNiveau.getPousseurX();
-        int posY = curNiveau.getPousseurY();
+    @Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D drawable = (Graphics2D) g;
 
-        x = (x - offsetX)/tailleCase;
-        y = (y - offsetY)/tailleCase;
+        Niveau niveau = jeu.niveau();
+        if (niveau == null) return;
 
-        if(x == posX -1 && y==posY)
-            return curNiveau.deplacePousseur('g');
-        else if(x == posX +1 && y==posY)
-            return curNiveau.deplacePousseur('d');
-        else if(x == posX && y == posY - 1)
-            return curNiveau.deplacePousseur('h');
-        else if(x == posX && y == posY + 1)
-            return curNiveau.deplacePousseur('b');
-        
-        return false;
+        interG.frame.setTitle("Sokoban Niveau: " + niveau.nom());
+
+        int lignes   = niveau.lignes();
+        int colonnes = niveau.colonnes();
+
+        offsetX = (getWidth()  - colonnes * tailleCase) / 2;
+        offsetY = (getHeight() - lignes   * tailleCase) / 2;
+
+        for (int i = 0; i < lignes; i++) {
+            for (int j = 0; j < colonnes; j++) {
+
+                int x = offsetX + j * tailleCase;
+                int y = offsetY + i * tailleCase;
+
+                drawable.drawImage(solImg, x, y, tailleCase, tailleCase, null);
+
+                if (niveau.aMur(i, j)) {
+                    drawable.drawImage(murImg, x, y, tailleCase, tailleCase, null);
+                } else if (niveau.aBut(i, j)) {
+                    drawable.drawImage(butImg, x, y, tailleCase, tailleCase, null);
+                }
+
+                if (niveau.aCaisse(i, j)) {
+                    if (animationCaisse != null
+                            && ((i == caisseStartY && j == caisseStartX)
+                             || (i == caisseEndY   && j == caisseEndX))) {
+                        continue;
+                    }
+                    if (niveau.aBut(i, j))
+                        drawable.drawImage(caise_sur_bImg, x, y, tailleCase, tailleCase, null);
+                    else
+                        drawable.drawImage(caisseImg, x, y, tailleCase, tailleCase, null);
+                }
+            }
+        }
+
+        if (animationCaisse != null) {
+            int cx = offsetX + (int)(caisseRenderX * tailleCase);
+            int cy = offsetY + (int)(caisseRenderY * tailleCase);
+            if (niveau.aBut(caisseEndY, caisseEndX))
+                drawable.drawImage(caise_sur_bImg, cx, cy, tailleCase, tailleCase, null);
+            else
+                drawable.drawImage(caisseImg, cx, cy, tailleCase, tailleCase, null);
+        }
+
+        int px, py;
+        if (animationPousseur != null) {
+            px = offsetX + (int)(pousseurRenderX * tailleCase);
+            py = offsetY + (int)(pousseurRenderY * tailleCase);
+        } else {
+            px = offsetX + niveau.getPousseurX() * tailleCase;
+            py = offsetY + niveau.getPousseurY() * tailleCase;
+        }
+        drawable.drawImage(animPousseurImg.getCurrentImage(), px, py, tailleCase, tailleCase, null);
     }
+
+    // -------------------------------------------------------------------------
+    // Déplacement
+    // -------------------------------------------------------------------------
+
+    public boolean deplacePousseur(int x, int y) {
+        Niveau n = jeu.niveau();
+
+        int oldX = n.getPousseurX();
+        int oldY = n.getPousseurY();
+
+        int dx = x - oldX;
+        int dy = y - oldY;
+
+        if (Math.abs(dx) + Math.abs(dy) != 1) return false;
+
+        boolean caisseBouge = n.aCaisse(oldY + dy, oldX + dx);
+
+        if (caisseBouge) {
+            caisseStartX = oldX + dx;
+            caisseStartY = oldY + dy;
+            caisseEndX   = caisseStartX + dx;
+            caisseEndY   = caisseStartY + dy;
+        }
+
+        boolean moved = false;
+        if (dx == -1) moved = n.deplacePousseur('g');
+        if (dx ==  1) moved = n.deplacePousseur('d');
+        if (dy == -1) moved = n.deplacePousseur('h');
+        if (dy ==  1) moved = n.deplacePousseur('b');
+
+        if (moved) {
+            if      (dx == -1) animPousseurImg.setDirection(AnimationPousseur.GAUCHE);
+            else if (dx ==  1) animPousseurImg.setDirection(AnimationPousseur.DROITE);
+            else if (dy == -1) animPousseurImg.setDirection(AnimationPousseur.HAUT);
+            else if (dy ==  1) animPousseurImg.setDirection(AnimationPousseur.BAS);
+
+            animPousseurImg.setEnMouvement(true);
+
+            animationPousseur = new AnimationCoups(oldX, oldY,
+                                                         n.getPousseurX(), n.getPousseurY());
+            animations.add(animationPousseur);
+
+            if (caisseBouge) {
+                animationCaisse = new AnimationCoups(caisseStartX, caisseStartY,
+                                                           caisseEndX,   caisseEndY);
+                animations.add(animationCaisse);
+            }
+        }
+
+        return moved;
+    }
+
+    // -------------------------------------------------------------------------
+    // Accesseurs
+    // -------------------------------------------------------------------------
+
+    public int getoffsetX()    { return offsetX; }
+    public int getoffsetY()    { return offsetY; }
+    public int getTailleCase() { return tailleCase; }
+    public AnimationCoups getAnimationPousseur()       { return animationPousseur; }
+    public AnimationCoups getAnimationCaisse()         { return animationCaisse; }
+    public AnimationPousseur getAnimationPousseurDep() { return animPousseurImg; }
 }

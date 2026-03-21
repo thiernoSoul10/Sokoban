@@ -15,6 +15,11 @@ public interface SequenceInterface<Type>{
 
     // extrait et renvoie la valeur de l'élément situé en début de séquence;
     public Type extraitTete();
+    
+    // renvoie la derniere valeur sans modifier la liste
+    public Type dernier();
+
+    public int getNbElement();
 
     // renvoie vrai si et seulement si la séquence est vide.
     public boolean estVide();

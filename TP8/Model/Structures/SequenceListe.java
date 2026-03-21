@@ -121,6 +121,14 @@ public class SequenceListe<Type extends Comparable<Type>> implements SequenceInt
         return val;
     }
 
+    public Type dernier(){
+        if(estVide()){
+            throw new RuntimeException("Séquence vide");
+        }
+
+        return queue.getElement();
+    }
+
     // renvoie vrai si et seulement si la séquence est vide.
     public boolean estVide(){
         return nbElement == 0;

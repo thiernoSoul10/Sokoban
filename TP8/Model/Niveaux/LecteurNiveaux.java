@@ -2,7 +2,7 @@ package Model.Niveaux;
 
 import java.util.*;
 
-import Global.Configuration;
+import Model.Global.Configuration;
 
 import java.io.*;
 

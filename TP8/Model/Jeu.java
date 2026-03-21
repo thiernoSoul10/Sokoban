@@ -2,7 +2,7 @@ package Model;
 
 import java.io.FileInputStream;
 
-import Global.Couple;
+import Model.Global.Couple;
 import Model.Niveaux.LecteurNiveaux;
 import Model.Niveaux.Niveau;
 import Model.Structures.FAP;

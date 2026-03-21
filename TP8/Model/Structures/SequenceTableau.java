@@ -105,6 +105,21 @@ public class SequenceTableau<Type> implements SequenceInterface<Type>{
         return element;
     }
 
+    public Type dernier(){
+        if(estVide()){
+            throw new RuntimeException("Séquence vide");
+        }
+
+       @SuppressWarnings("unchecked")
+        Type element = (Type) tab[queue];
+
+        return element;
+    }
+
+    public int getNbElement(){
+        return nbElement;
+    }
+
     // renvoie vrai si et seulement si la séquence est vide.
     public boolean estVide(){
         return nbElement == 0;

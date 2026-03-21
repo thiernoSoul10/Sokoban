@@ -1,62 +1,51 @@
 package Controleur;
+
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
-import Global.Configuration;
-import Vue.*;
+import Model.Global.Configuration;
+import Model.Global.Coordonnees;
+import Vue.InterfaceGraphique;
+import Vue.NiveauGraphique;
 
-public class EcouteurDeClavier extends KeyAdapter{
+public class EcouteurDeClavier extends KeyAdapter {
+
     private InterfaceGraphique interG;
-    private NiveauGraphique aireDeDessin;
-    private AnimationJeuAutomatique animationIA;
+    private NiveauGraphique    aireDeDessin;
 
-    public EcouteurDeClavier(InterfaceGraphique ig, NiveauGraphique aireDeDessin, AnimationJeuAutomatique animationIA){
+    public EcouteurDeClavier(InterfaceGraphique ig, NiveauGraphique aireDeDessin) {
+        this.interG       = ig;
         this.aireDeDessin = aireDeDessin;
-        this.interG = ig;
-        this.animationIA = animationIA;
     }
 
-	@Override
-	public void keyPressed(KeyEvent e) {
-
-        char direction = ' ';
+    @Override
+    public void keyPressed(KeyEvent e) {
+        int dx = 0, dy = 0;
 
         switch (e.getKeyCode()) {
-            case java.awt.event.KeyEvent.VK_ESCAPE:
-                interG.toggleFullscreen();                  
+            case KeyEvent.VK_ESCAPE: interG.toggleFullscreen(); return;
+            case KeyEvent.VK_LEFT:   dx = -1; break;
+            case KeyEvent.VK_RIGHT:  dx =  1; break;
+            case KeyEvent.VK_UP:     dy = -1; break;
+            case KeyEvent.VK_DOWN:   dy =  1; break;
+            case KeyEvent.VK_S:  // on arrête les animations
+                aireDeDessin.getAnimationPousseur().DesactivateAnimation();
+                aireDeDessin.getAnimationCaisse().DesactivateAnimation();
                 return;
-            case java.awt.event.KeyEvent.VK_LEFT:   direction = 'g';
-                break;
-            case java.awt.event.KeyEvent.VK_RIGHT:  direction = 'd';
-                break;
-            case java.awt.event.KeyEvent.VK_UP:     direction = 'h';
-                break;
-            case java.awt.event.KeyEvent.VK_DOWN:   direction = 'b';
-                break;
-            case java.awt.event.KeyEvent.VK_I:
-                // Bascule l'animation IA (démarre/arrête)
-                animationIA.basculer();
+            case KeyEvent.VK_R:
+                aireDeDessin.getAnimationPousseur().activateAnimation();
+                aireDeDessin.getAnimationCaisse().activateAnimation();
                 return;
-            case java.awt.event.KeyEvent.VK_A:
-            case java.awt.event.KeyEvent.VK_Q:
-                System.exit(0);
-                return;
-            default:
-                return;
+            case KeyEvent.VK_A:
+            case KeyEvent.VK_Q:      System.exit(0); return;
+            default: return;
         }
-        
-		Configuration.debugeur("Le bouton du clavier a été pressé\n");
 
-        if(aireDeDessin.getNiveauJeu().deplacePousseur(direction))        
-            if(aireDeDessin.niveauTermine()){
-                if(aireDeDessin.jeu.prochainNiveau())
-                    Configuration.debugeur("NIVEAU suivant\n");
-                else
-                    Configuration.debugeur("Felicitation Vous avez FINI LE JEU\n");
-            }
+        Configuration.debugeur("Le bouton du clavier a été pressé\n");
 
-        aireDeDessin.repaint();
-	}
-
-    
+        // On part de la DERNIÈRE position enqueued (pas de la position du modèle),
+        // ce qui évite les sauts incohérents pendant une animation en cours.
+        Coordonnees last = aireDeDessin.getLastQueuedPosition();
+        aireDeDessin.addMovement(new Coordonnees(last.x + dx, last.y + dy));
+    }
 }

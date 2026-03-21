@@ -1,8 +1,8 @@
 package Vue;
 import java.util.Scanner;
 
-import Global.Configuration;
 import Model.Jeu;
+import Model.Global.Configuration;
 
 public class InterfaceTextuelle {
     private Jeu jeu; 

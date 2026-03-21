@@ -2,10 +2,9 @@
 
 import Vue.InterfaceGraphique;
 import Vue.InterfaceTextuelle;
+import Model.Global.Configuration;
 
 import javax.swing.SwingUtilities;
-
-import Global.Configuration;
 
 
 class Sokoban{
