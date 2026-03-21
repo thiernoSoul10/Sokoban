@@ -28,6 +28,7 @@ package Vue;
 
 import javax.swing.*;
 
+import Controleur.AnimationJeuAutomatique;
 import Controleur.EcouteurDeClavier;
 import Controleur.EcouteurDeSouris;
 
@@ -46,10 +47,13 @@ public class InterfaceGraphique implements Runnable {
 		// Ajout de notre composant de dessin dans la fenetre
 		frame.add(aire);
 
+		// Création de l'animation IA
+		AnimationJeuAutomatique animationIA = new AnimationJeuAutomatique(aire);
+
 		// Ecoute des évènements liés à la souris dans l'AireDeDessin
 		aire.addMouseListener(new EcouteurDeSouris(aire));
 
-		aire.addKeyListener(new EcouteurDeClavier(this, aire));
+		aire.addKeyListener(new EcouteurDeClavier(this, aire, animationIA));
 
 		// Un clic sur le bouton de fermeture clos l'application
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

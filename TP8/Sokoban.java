@@ -12,7 +12,7 @@ class Sokoban{
     public static void main(String [] args) throws Exception{
         
         switch (Configuration.mode) {
-            case Configuration.Mode.TEXTUEL:
+            case TEXTUEL:
                 InterfaceTextuelle inter = new InterfaceTextuelle();            
                 inter.lancer();
                 break;

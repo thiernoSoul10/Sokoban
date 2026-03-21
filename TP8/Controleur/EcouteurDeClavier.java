@@ -8,17 +8,17 @@ import Vue.*;
 public class EcouteurDeClavier extends KeyAdapter{
     private InterfaceGraphique interG;
     private NiveauGraphique aireDeDessin;
+    private AnimationJeuAutomatique animationIA;
 
-    public EcouteurDeClavier(InterfaceGraphique ig, NiveauGraphique aireDeDessin){
+    public EcouteurDeClavier(InterfaceGraphique ig, NiveauGraphique aireDeDessin, AnimationJeuAutomatique animationIA){
         this.aireDeDessin = aireDeDessin;
-
         this.interG = ig;
-
+        this.animationIA = animationIA;
     }
+
 	@Override
 	public void keyPressed(KeyEvent e) {
 
-        // addKeyListener(new java.awt.event.KeyAdapter()
         char direction = ' ';
 
         switch (e.getKeyCode()) {
@@ -33,9 +33,12 @@ public class EcouteurDeClavier extends KeyAdapter{
                 break;
             case java.awt.event.KeyEvent.VK_DOWN:   direction = 'b';
                 break;
+            case java.awt.event.KeyEvent.VK_I:
+                // Bascule l'animation IA (démarre/arrête)
+                animationIA.basculer();
+                return;
             case java.awt.event.KeyEvent.VK_A:
             case java.awt.event.KeyEvent.VK_Q:
-                // Fermer L'APPLI
                 System.exit(0);
                 return;
             default:

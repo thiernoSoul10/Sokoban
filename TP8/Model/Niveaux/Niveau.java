@@ -6,9 +6,9 @@ import java.util.ArrayList;
 
 import Global.Configuration;
 
-public class Niveau {
+public class Niveau implements Cloneable {
 
-    // Attribus:
+    // Attributs:
     private int lignes;
     private int colonnes;
     private String nom;
@@ -18,6 +18,7 @@ public class Niveau {
     private int pousseurY;
     private ArrayList<Point> butsCoordonnees;
     private boolean niveauFini = false;
+    private boolean[][] marques;
 
     public Niveau(int lignes, int colonnes){
         this.lignes = lignes;
@@ -25,6 +26,36 @@ public class Niveau {
 
         cases = new char[lignes][colonnes];
         butsCoordonnees = new ArrayList<>();
+        marques = new boolean[lignes][colonnes];
+    }
+
+    // ---------------------------------------------------------------
+    // Clone profond
+    // ---------------------------------------------------------------
+    @Override
+    public Niveau clone() {
+        try {
+            Niveau copie = (Niveau) super.clone();
+
+            // Copie profonde du tableau de cases
+            copie.cases = new char[lignes][colonnes];
+            for (int i = 0; i < lignes; i++)
+                copie.cases[i] = this.cases[i].clone();
+
+            // Copie profonde de la liste des buts
+            copie.butsCoordonnees = new ArrayList<>();
+            for (Point p : this.butsCoordonnees)
+                copie.butsCoordonnees.add(new Point(p));
+
+            // Copie profonde des marques
+            copie.marques = new boolean[lignes][colonnes];
+            for (int i = 0; i < lignes; i++)
+                copie.marques[i] = this.marques[i].clone();
+
+            return copie;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError("Cloneable implémenté, ne devrait pas arriver", e);
+        }
     }
 
     public boolean niveauOk(){
@@ -246,6 +277,29 @@ public class Niveau {
 
     public void setPousseurX(int i){  this.pousseurX = i; }
     public void setPousseurY(int i){  this.pousseurY = i; }
+
+    // ---------------------------------------------------------------
+    // Marques
+    // ---------------------------------------------------------------
+
+    /** Pose une marque sur la case (ligne i, colonne j). */
+    public void poserMarque(int i, int j) {
+        if (i >= 0 && i < lignes && j >= 0 && j < colonnes)
+            marques[i][j] = true;
+    }
+
+    /** Retire la marque de la case (ligne i, colonne j). */
+    public void retirerMarque(int i, int j) {
+        if (i >= 0 && i < lignes && j >= 0 && j < colonnes)
+            marques[i][j] = false;
+    }
+
+    /** Retourne vrai si la case (ligne i, colonne j) est marquée. */
+    public boolean aMarque(int i, int j) {
+        if (i >= 0 && i < lignes && j >= 0 && j < colonnes)
+            return marques[i][j];
+        return false;
+    }
 
     public void afficher_niveau(){
         int lignes = lignes();

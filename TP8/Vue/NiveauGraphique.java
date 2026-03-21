@@ -141,7 +141,15 @@ public class NiveauGraphique extends JComponent {
     		        drawable.drawImage(caisseImg, x, y, tailleCase, tailleCase, null);
                 else if(niveau.aPousseur(i, j))
     		        drawable.drawImage(pousseurImg, x, y, tailleCase, tailleCase, null);
-                // On affiche une petite image au milieu
+
+                // Affichage des marques : croix rouge sur la case
+                if(niveau.aMarque(i, j)){
+                    int marge = 5;
+                    drawable.setColor(new java.awt.Color(0xFF0000));
+                    drawable.setStroke(new java.awt.BasicStroke(4));
+                    drawable.drawLine(x + marge, y + marge, x + tailleCase - marge, y + tailleCase - marge);
+                    drawable.drawLine(x + tailleCase - marge, y + marge, x + marge, y + tailleCase - marge);
+                }
             }
         }
 	}
