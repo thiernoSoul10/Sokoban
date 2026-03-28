@@ -5,11 +5,11 @@ import java.io.FileNotFoundException;
 
 public final class Configuration {
     private static String PATH = "res/";
-    private static boolean debug = false; // tous les messages sont affichés si vrai
+    private static boolean debug = true; // tous les messages sont affichés si vrai
     private static boolean debugError = true;
     public enum Mode { GRAHIQUE, TEXTUEL }
 
-    public static Mode mode = Mode.TEXTUEL;
+    public static Mode mode = Mode.GRAHIQUE;
     
     public static FileInputStream ouvre(String path){
         FileInputStream in = null;

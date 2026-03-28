@@ -17,6 +17,27 @@ public class Coordonnees implements Comparable<Coordonnees> {
 
     @Override
     public int compareTo(Coordonnees o) {
-        return 0;
+        int cmpX = Integer.compare(this.x, o.x);
+        if(cmpX != 0) return cmpX;
+        return Integer.compare(this.y, o.y);
+    }
+
+    @Override
+    public boolean equals(Object obj){
+        if(this == obj) return true;
+        if(!(obj instanceof Coordonnees)) return false;
+
+        Coordonnees o = (Coordonnees) obj;
+        return this.x == o.getX() && this.y == o.getY();
+    }
+
+    @Override
+    public int hashCode(){
+        return 31 * x + y;
+    }
+
+    @Override
+    public String toString() {
+        return "Point(" + x + "," + y + "):" + hashCode();
     }
 }

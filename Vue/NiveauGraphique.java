@@ -6,19 +6,21 @@ import javax.swing.*;
 import Model.Jeu;
 import Model.Global.*;
 import Model.Niveaux.Niveau;
-import Model.Structures.SequenceInterface;
-import Model.Structures.SequenceListe;
 
 import java.awt.*;
 import java.io.*;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 public class NiveauGraphique extends JComponent {
 
+    private static final int MAX_MOVEMENTS = 1000;
+
     private InterfaceGraphique interG;
-    private SequenceInterface<Coordonnees> movements;
-    private Coordonnees lastQueued = null;
+    private Deque<Coordonnees> movements = new ArrayDeque<>(); // était SequenceInterface
+    private Coordonnees        lastQueued = null;
 
     private int tailleCase = 40;
     private int offsetX;
@@ -32,11 +34,10 @@ public class NiveauGraphique extends JComponent {
 
     public Jeu jeu;
 
-    private List<Animation> animations = new ArrayList<>();
-
-    private AnimationCoups animationPousseur = null;
-    private AnimationCoups animationCaisse   = null;
-    private AnimationPousseur    animPousseurImg;
+    private List<Animation>    animations = new ArrayList<>();
+    private AnimationCoups     animationPousseur = null;
+    private AnimationCoups     animationCaisse   = null;
+    private AnimationPousseur  animPousseurImg;
 
     private float pousseurRenderX, pousseurRenderY;
     private float caisseRenderX,   caisseRenderY;
@@ -52,7 +53,6 @@ public class NiveauGraphique extends JComponent {
 
         FileInputStream fin = Configuration.ouvre("Terrains/Tests.txt");
         jeu = new Jeu(fin);
-        movements = new SequenceListe<>();
 
         try {
             butImg         = ImageIO.read(Configuration.ouvre("Images/But.png"));
@@ -76,15 +76,13 @@ public class NiveauGraphique extends JComponent {
     // -------------------------------------------------------------------------
 
     public void addMovement(Coordonnees p) {
-        if (movements.getNbElement() >= 5) return;
-        movements.insereQueue(p);
+        if (movements.size() >= MAX_MOVEMENTS) return;
+        movements.addLast(p);
         lastQueued = p;
     }
 
     public Coordonnees getLastQueuedPosition() {
-        if (lastQueued != null && !movements.estVide()) {
-            return lastQueued;
-        }
+        if (lastQueued != null && !movements.isEmpty()) return lastQueued;
         return new Coordonnees(jeu.niveau().getPousseurX(), jeu.niveau().getPousseurY());
     }
 
@@ -117,8 +115,8 @@ public class NiveauGraphique extends JComponent {
         }
 
         if (animationPousseur == null && animationCaisse == null) {
-            if (!movements.estVide()) {
-                Coordonnees p = movements.extraitTete();
+            if (!movements.isEmpty()) {
+                Coordonnees p = movements.pollFirst(); // était extraitTete()
                 deplacePousseur(p.getX(), p.getY());
             } else {
                 lastQueued = null;
@@ -147,7 +145,7 @@ public class NiveauGraphique extends JComponent {
         Niveau niveau = jeu.niveau();
         if (niveau == null) return;
 
-        interG.frame.setTitle("Sokoban Niveau: " + niveau.nom());
+        interG.getFrame().setTitle("Sokoban Niveau: " + niveau.nom());
 
         int lignes   = niveau.lignes();
         int colonnes = niveau.colonnes();
@@ -227,27 +225,24 @@ public class NiveauGraphique extends JComponent {
             caisseEndY   = caisseStartY + dy;
         }
 
-        boolean moved = false;
-        if (dx == -1) moved = n.deplacePousseur('g');
-        if (dx ==  1) moved = n.deplacePousseur('d');
-        if (dy == -1) moved = n.deplacePousseur('h');
-        if (dy ==  1) moved = n.deplacePousseur('b');
+        char dir = (dx == -1) ? 'g' : (dx == 1) ? 'd' : (dy == -1) ? 'h' : 'b';
+        boolean moved = n.deplacePousseur(dir);
 
         if (moved) {
             if      (dx == -1) animPousseurImg.setDirection(AnimationPousseur.GAUCHE);
             else if (dx ==  1) animPousseurImg.setDirection(AnimationPousseur.DROITE);
             else if (dy == -1) animPousseurImg.setDirection(AnimationPousseur.HAUT);
-            else if (dy ==  1) animPousseurImg.setDirection(AnimationPousseur.BAS);
+            else               animPousseurImg.setDirection(AnimationPousseur.BAS);
 
             animPousseurImg.setEnMouvement(true);
 
             animationPousseur = new AnimationCoups(oldX, oldY,
-                                                         n.getPousseurX(), n.getPousseurY());
+                                                   n.getPousseurX(), n.getPousseurY());
             animations.add(animationPousseur);
 
             if (caisseBouge) {
                 animationCaisse = new AnimationCoups(caisseStartX, caisseStartY,
-                                                           caisseEndX,   caisseEndY);
+                                                     caisseEndX,   caisseEndY);
                 animations.add(animationCaisse);
             }
         }
@@ -259,10 +254,11 @@ public class NiveauGraphique extends JComponent {
     // Accesseurs
     // -------------------------------------------------------------------------
 
-    public int getoffsetX()    { return offsetX; }
-    public int getoffsetY()    { return offsetY; }
-    public int getTailleCase() { return tailleCase; }
-    public AnimationCoups getAnimationPousseur()       { return animationPousseur; }
-    public AnimationCoups getAnimationCaisse()         { return animationCaisse; }
-    public AnimationPousseur getAnimationPousseurDep() { return animPousseurImg; }
+    public int               getoffsetX()            { return offsetX; }
+    public int               getoffsetY()            { return offsetY; }
+    public int               getTailleCase()          { return tailleCase; }
+    public AnimationCoups    getAnimationPousseur()   { return animationPousseur; }
+    public AnimationCoups    getAnimationCaisse()     { return animationCaisse; }
+    public AnimationPousseur getAnimationPousseurDep(){ return animPousseurImg; }
+    public InterfaceGraphique getInterG(){ return interG; }
 }
