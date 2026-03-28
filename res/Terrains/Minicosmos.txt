@@ -1,16 +1,3 @@
-Minicosmos Levels, created by Aymeric du Peloux.
-Aymeric has created another level set in the tradition of Microcosmos.
-He says this set is for beginners because the levels have only 2 or 3 stones.
-But I still found them interesting, even though I'm an experienced player.
-Many of the levels come in pairs: a relatively easy level with 2 stones, followed
-by a more challenging level with the same layout and an extra stone. This is
-a nice way of providing hints.
-
-Author: Aymeric du Peloux
-
-This file downloaded from the Sokoban levels page at
-http://sneezingtiger.com/sokoban/levels.html
-
 Level 1
 'MINICOSMOS 01'
   #####

@@ -71,4 +71,6 @@ public class InterfaceGraphique implements Runnable {
             maximized = true;
         }
     }
+
+    public JFrame getFrame(){ return frame; }
 }

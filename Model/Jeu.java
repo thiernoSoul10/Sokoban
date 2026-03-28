@@ -1,35 +1,29 @@
 package Model;
 
 import java.io.FileInputStream;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
-import Model.Global.Couple;
 import Model.Niveaux.LecteurNiveaux;
 import Model.Niveaux.Niveau;
-import Model.Structures.FAP;
-import Model.Structures.Iterateur;
 
 public class Jeu {
     private Niveau current;
-    private FAP<Couple<Niveau>> niveaux;
-    private Iterateur<Couple<Niveau>> it;
+    private Deque<Niveau> niveaux;
 
     public Jeu(FileInputStream fin){
-        niveaux = new FAP<>();
-        boolean OK = true;
+        niveaux = new ArrayDeque<>();
         LecteurNiveaux lecteurNiveaux = new LecteurNiveaux(fin);
 
+        boolean OK = true;
         while(OK){
             Niveau niveau = lecteurNiveaux.lisProchainNiveau();
             if(niveau == null){ OK = false; }
-            else { 
-                // dans notre cas puisque la priorité est la même on enfile qu'en fin de file
-                niveaux.enfiler(new Couple<>(niveau));
-            }
+            else { niveaux.addLast(niveau); }
         }
 
-        it= niveaux.iterateur();
-        if(it.aProchain())
-            current = it.prochain().getValeur();
+        if(!niveaux.isEmpty())
+            current = niveaux.pollFirst();
     }
 
     public Niveau niveau(){
@@ -37,11 +31,10 @@ public class Jeu {
     }
 
     public boolean prochainNiveau(){
-        if(it.aProchain()){
-            current = it.prochain().getValeur();
+        if(!niveaux.isEmpty()){
+            current = niveaux.pollFirst();
             return true;
         }
         return false;
     }
-
 }
